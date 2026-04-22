@@ -26,4 +26,6 @@ jobs:
             -scheme YourApp \
             -sdk iphoneos \
             -configuration Release \
+            -allowProvisioningUpdates \
+            DEVELOPMENT_TEAM=53Q5DF4NQ3 \
             build
