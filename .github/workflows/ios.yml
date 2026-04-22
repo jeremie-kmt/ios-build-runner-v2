@@ -27,20 +27,20 @@ jobs:
           APPSTORE_API_KEY: ${{ secrets.APPSTORE_API_KEY }}
 
       # 🔧 Build the app (authenticated)
-      - name: Build iOS (App Store)
-        run: |
-          xcodebuild \
-            -project ios-template/YourApp.xcodeproj \
-            -scheme YourApp \
-            -sdk iphoneos \
-            -configuration Release \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath $PWD/private_keys/AuthKey.p8 \
-            -authenticationKeyID $APPSTORE_KEY_ID \
-            -authenticationKeyIssuerID $APPSTORE_ISSUER_ID \
-            DEVELOPMENT_TEAM=53Q5DF4NQ3 \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            build
-        env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+    - name: Archive app
+      run: |
+        xcodebuild \
+          -project ios-template/YourApp.xcodeproj \
+          -scheme YourApp \
+          -sdk iphoneos \
+          -configuration Release \
+          -allowProvisioningUpdates \
+          -authenticationKeyPath $PWD/private_keys/AuthKey.p8 \
+          -authenticationKeyID $APPSTORE_KEY_ID \
+          -authenticationKeyIssuerID $APPSTORE_ISSUER_ID \
+          DEVELOPMENT_TEAM=53Q5DF4NQ3 \
+          -archivePath $PWD/build/YourApp.xcarchive \
+          archive
+      env:
+        APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+        APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
