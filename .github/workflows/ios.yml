@@ -39,6 +39,8 @@ jobs:
             -authenticationKeyID $APPSTORE_KEY_ID \
             -authenticationKeyIssuerID $APPSTORE_ISSUER_ID \
             DEVELOPMENT_TEAM=53Q5DF4NQ3 \
+            CODE_SIGN_STYLE=Automatic \
+            PROVISIONING_PROFILE_SPECIFIER="" \
             -archivePath $PWD/build/YourApp.xcarchive \
             archive
         env:
