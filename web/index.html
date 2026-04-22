@@ -1,1 +1,30 @@
 
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>template de to-do list</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header><h1>📝 template de to-do list</h1></header>
+    <form id="add-form">
+      <input type="text" id="task-input" placeholder="Ajouter une tâche..." required>
+      <select id="priority"><option value="low">Basse</option><option value="medium" selected>Normale</option><option value="high">Haute</option></select>
+      <button type="submit">+</button>
+    </form>
+    <div class="filters">
+      <button class="filter active" data-filter="all">Toutes</button>
+      <button class="filter" data-filter="active">Actives</button>
+      <button class="filter" data-filter="done">Terminées</button>
+    </div>
+    <ul id="task-list"></ul>
+    <div class="status"><span id="count">0 tâche(s)</span><button id="clear-done">Supprimer terminées</button></div>
+  </div>
+
+
+  <script src="script.js"></script>
+</body>
+</html>
