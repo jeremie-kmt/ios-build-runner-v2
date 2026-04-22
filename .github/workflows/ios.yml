@@ -1,0 +1,29 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # 🔥 Inject your web app into iOS bundle
+      - name: Copy web assets
+        run: |
+          mkdir -p ios-template/YourApp/web
+          cp -r web/* ios-template/YourApp/web/
+
+      # 🔧 Build the app
+      - name: Build iOS
+        run: |
+          xcodebuild \
+            -project ios-template/YourApp.xcodeproj \
+            -scheme YourApp \
+            -sdk iphoneos \
+            -configuration Release \
+            build
