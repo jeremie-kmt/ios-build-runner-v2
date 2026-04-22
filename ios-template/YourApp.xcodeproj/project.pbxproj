@@ -89,6 +89,7 @@ C3 = {
 		CODE_SIGN_STYLE = Manual;
 		SDKROOT = iphoneos;
 		TARGETED_DEVICE_FAMILY = 1;
+PRODUCT_BUNDLE_IDENTIFIER = com.eden00.testapp;
 	};
 };
 
