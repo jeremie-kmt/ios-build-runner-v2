@@ -1,4 +1,4 @@
-name: Build iOS App
+name: Build iOS WebView App
 
 on:
   push:
@@ -9,40 +9,104 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      # 🔥 Inject your web app into iOS bundle
-      - name: Copy web assets
+      # ─────────────────────────────
+      # 1. Inject web app
+      # ─────────────────────────────
+      - name: Inject web assets
         run: |
           mkdir -p ios-template/YourApp/web
           cp -r web/* ios-template/YourApp/web/
 
-      # 🔐 Create API key file from secret
-      - name: Create API key file
+      # ─────────────────────────────
+      # 2. Create signing files
+      # ─────────────────────────────
+      - name: Create signing files
         run: |
-          mkdir -p private_keys
-          printf "%s" "$APPSTORE_API_KEY" > private_keys/AuthKey.p8
-        env:
-          APPSTORE_API_KEY: ${{ secrets.APPSTORE_API_KEY }}
+          mkdir -p $RUNNER_TEMP/signing
 
-      # 🔧 Build the app (authenticated)
-      - name: Archive app
+          # Decode certificate + key from secrets
+          echo "${{ secrets.CERT_BASE64 }}" | base64 --decode > $RUNNER_TEMP/signing/cert.cer
+          echo "${{ secrets.KEY_PEM }}" > $RUNNER_TEMP/signing/key.pem
+
+          # Convert to PEM
+          openssl x509 -inform DER \
+            -in $RUNNER_TEMP/signing/cert.cer \
+            -out $RUNNER_TEMP/signing/cert.pem
+
+          # Create P12
+          openssl pkcs12 -export \
+            -inkey $RUNNER_TEMP/signing/key.pem \
+            -in $RUNNER_TEMP/signing/cert.pem \
+            -out $RUNNER_TEMP/signing/distribution.p12 \
+            -passout pass:temp1234
+
+      # ─────────────────────────────
+      # 3. Setup keychain
+      # ─────────────────────────────
+      - name: Setup keychain
+        run: |
+          KEYCHAIN=$RUNNER_TEMP/build.keychain-db
+          KEYCHAIN_PASS=$(openssl rand -hex 16)
+
+          security create-keychain -p "$KEYCHAIN_PASS" $KEYCHAIN
+          security unlock-keychain -p "$KEYCHAIN_PASS" $KEYCHAIN
+          security set-keychain-settings -lut 21600 $KEYCHAIN
+
+          security import $RUNNER_TEMP/signing/distribution.p12 \
+            -k $KEYCHAIN \
+            -P temp1234 \
+            -A \
+            -T /usr/bin/codesign
+
+          security set-key-partition-list \
+            -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASS" $KEYCHAIN
+
+          security list-keychain -d user -s $KEYCHAIN
+
+      # ─────────────────────────────
+      # 4. Install provisioning profile
+      # ─────────────────────────────
+      - name: Install provisioning profile
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${{ secrets.PROFILE_BASE64 }}" | base64 --decode > $RUNNER_TEMP/profile.mobileprovision
+          cp $RUNNER_TEMP/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      # ─────────────────────────────
+      # 5. Build
+      # ─────────────────────────────
+      - name: Build iOS App
         run: |
           xcodebuild \
             -project ios-template/YourApp.xcodeproj \
             -scheme YourApp \
             -sdk iphoneos \
             -configuration Release \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath $PWD/private_keys/AuthKey.p8 \
-            -authenticationKeyID $APPSTORE_KEY_ID \
-            -authenticationKeyIssuerID $APPSTORE_ISSUER_ID \
+            CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM=53Q5DF4NQ3 \
-            CODE_SIGN_STYLE=Automatic \
-            PROVISIONING_PROFILE_SPECIFIER="" \
-            -archivePath $PWD/build/YourApp.xcarchive \
-            archive
-        env:
-          APPSTORE_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-          APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+            PROVISIONING_PROFILE_SPECIFIER="YOUR_PROFILE_NAME" \
+            clean archive
+
+      # ─────────────────────────────
+      # 6. Export IPA
+      # ─────────────────────────────
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath $RUNNER_TEMP/YourApp.xcarchive \
+            -exportPath $RUNNER_TEMP/build \
+            -allowProvisioningUpdates
+
+      # ─────────────────────────────
+      # 7. Upload TestFlight
+      # ─────────────────────────────
+      - name: Upload
+        run: |
+          xcrun altool --upload-app \
+            --file "$RUNNER_TEMP/build/YourApp.ipa" \
+            --apiKey ${{ secrets.APPSTORE_KEY_ID }} \
+            --apiIssuer ${{ secrets.APPSTORE_ISSUER_ID }}
