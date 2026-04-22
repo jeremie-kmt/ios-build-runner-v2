@@ -18,8 +18,14 @@ jobs:
           mkdir -p ios-template/YourApp/web
           cp -r web/* ios-template/YourApp/web/
 
+      - name: Setup App Store Connect API
+        run: |
+          mkdir -p private_keys
+          echo "$APPSTORE_API_KEY" > private_keys/AuthKey.p8
+
+    
       # 🔧 Build the app
-      - name: Build iOS
+      - name: Build iOS (authenticated)
         run: |
           xcodebuild \
             -project ios-template/YourApp.xcodeproj \
@@ -27,5 +33,8 @@ jobs:
             -sdk iphoneos \
             -configuration Release \
             -allowProvisioningUpdates \
+            -authenticationKeyPath private_keys/AuthKey.p8 \
+            -authenticationKeyID $APPSTORE_KEY_ID \
+            -authenticationKeyIssuerID $APPSTORE_ISSUER_ID \
             DEVELOPMENT_TEAM=53Q5DF4NQ3 \
             build
